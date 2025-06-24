@@ -6,17 +6,14 @@ import platform
 # Conditional import for file locking
 if platform.system() == "Windows":
     import msvcrt
+    fcntl = None # Define fcntl as None on Windows so it exists for checks
 else:
+    # On non-Windows, fcntl is expected. If it's not there, it's an issue for POSIX locking.
     try:
         import fcntl
     except ImportError:
-        # This might happen on some non-standard POSIX-like environments
-        # or if fcntl is somehow not available.
-        # For now, we'll let it raise an error if not Windows and fcntl is missing,
-        # as it's a core part of the locking for POSIX.
-        # A more robust solution could be a dummy lock or warning.
-        print("Warning: fcntl module not found on a non-Windows system. File locking might not work as expected.")
-        fcntl = None # Set to None so later checks can see it's unavailable
+        print("CRITICAL WARNING: fcntl module not found on this POSIX-like system. File locking will be disabled. This can lead to data corruption under concurrent access.")
+        fcntl = None # Locking will be disabled
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 CONFIG_FILE = os.path.join(DATA_DIR, 'config.json')
@@ -33,15 +30,42 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 def _lock_file(f):
     if platform.system() == "Windows":
-        msvcrt.locking(f.fileno(), msvcrt.LK_RLCK, 1) # Lock 1 byte for testing
-    else:
+        # LK_LOCK acquires an exclusive lock.
+        # Retry for a short period if the lock is not immediately available.
+        for _ in range(10): # Retry up to 10 times
+            try:
+                msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1) # Lock 1 byte; actual region may be larger
+                break # Lock acquired
+            except OSError as e:
+                # In Python 3.3+, BlockingIOError is a subclass of OSError.
+                # Error code for "Permission denied" or "Access is denied" can vary.
+                # Common ones are 13 (Permission denied) or specific Windows error codes via e.winerror
+                # A simple check for OSError and retrying is often sufficient for basic contention.
+                # On Windows, if another process has the file open without sharing, this can fail.
+                # Or if the current process already locked it via another descriptor.
+                # For this app's low concurrency, a short wait should be okay.
+                if hasattr(e, 'winerror') and e.winerror == 33: # ERROR_LOCK_VIOLATION
+                     time.sleep(0.1) # Wait and retry
+                elif e.errno == 13: # EACCES - Permission denied
+                    time.sleep(0.1)
+                else:
+                    # An unexpected error occurred
+                    print(f"Unexpected OSError during msvcrt.locking (LK_LOCK): {e}")
+                    raise
+        else:
+            # If loop completes without break, lock was not acquired
+            print(f"Could not acquire file lock on Windows for {f.name} after multiple attempts.")
+            raise OSError(f"Could not acquire file lock on Windows for {f.name} after multiple attempts.")
+    elif fcntl: # Check if fcntl was successfully imported (non-Windows)
         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+    # If fcntl is None on a POSIX system (due to import error), no POSIX lock is applied (warning already issued).
 
 def _unlock_file(f):
     if platform.system() == "Windows":
         msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
-    else:
+    elif fcntl: # Check if fcntl was successfully imported (non-Windows)
         fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    # If fcntl is None on a POSIX system, no POSIX unlock is applied.
 
 
 # --- Generic Read/Write with Locking ---
