@@ -1,9 +1,22 @@
 import json
 import os
-import fcntl # For file locking on POSIX systems
-import msvcrt # For file locking on Windows
 import time
 import platform
+
+# Conditional import for file locking
+if platform.system() == "Windows":
+    import msvcrt
+else:
+    try:
+        import fcntl
+    except ImportError:
+        # This might happen on some non-standard POSIX-like environments
+        # or if fcntl is somehow not available.
+        # For now, we'll let it raise an error if not Windows and fcntl is missing,
+        # as it's a core part of the locking for POSIX.
+        # A more robust solution could be a dummy lock or warning.
+        print("Warning: fcntl module not found on a non-Windows system. File locking might not work as expected.")
+        fcntl = None # Set to None so later checks can see it's unavailable
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 CONFIG_FILE = os.path.join(DATA_DIR, 'config.json')
