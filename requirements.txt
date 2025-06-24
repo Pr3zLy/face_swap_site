@@ -1,0 +1,5 @@
+Flask>=2.0
+werkzeug>=2.0 # For password hashing, usually a Flask dependency
+python-dotenv # Optional, for managing environment variables if we decide to use .env files
+# Add other specific dependencies as they become clear, e.g., for image processing if any is done in Flask app itself.
+# For now, the core is Flask. The run.py script has its own venv.

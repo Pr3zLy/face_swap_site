@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Task Queue - Admin</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 1200px; margin: 20px auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 15px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; margin-bottom: 30px; }
+
+        .flash-messages { list-style: none; padding: 0; margin-bottom: 20px; }
+        .flash-messages li { padding: 12px 15px; margin-bottom: 10px; border-radius: 5px; font-size: 0.95em; }
+        .flash-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .flash-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .flash-info { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+        .flash-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
+        th, td { text-align: left; padding: 10px; border-bottom: 1px solid #ddd; vertical-align: middle; }
+        th { background-color: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        tr:hover { background-color: #e9e9e9; }
+
+        .task-id-short { font-family: monospace; font-size: 0.9em; }
+        .path-details { font-size: 0.85em; color: #555; max-width: 200px; overflow-wrap: break-word; }
+        .status-queued { color: #ffc107; font-weight: bold; }
+        .status-processing { color: #007bff; font-weight: bold; }
+        .status-completed { color: #28a745; font-weight: bold; }
+        .status-failed { color: #dc3545; font-weight: bold; }
+
+        .actions form { display: inline-block; margin-right: 5px; }
+        .actions button, .actions input[type="submit"] {
+            padding: 5px 10px; font-size: 0.85em; border-radius: 4px; border: none; cursor: pointer;
+            color: white;
+        }
+        .actions .btn-priority { background-color: #17a2b8; }
+        .actions .btn-priority:hover { background-color: #117a8b; }
+        .actions .btn-retry { background-color: #ffc107; color: #212529; }
+        .actions .btn-retry:hover { background-color: #e0a800; }
+        .actions .btn-delete { background-color: #dc3545; }
+        .actions .btn-delete:hover { background-color: #c82333; }
+        .actions input[type="number"] { width: 50px; padding: 4px; font-size: 0.9em; margin-right: 5px; }
+
+        .no-tasks { text-align: center; padding: 20px; color: #777; font-size: 1.1em; }
+        .nav-bar { margin-bottom: 20px; background-color: #333; padding: 10px; text-align: center; }
+        .nav-bar a { color: white; margin: 0 15px; text-decoration: none; font-size: 1.1em; }
+        .nav-bar a:hover { text-decoration: underline; }
+        .error-message-display { font-size: 0.8em; color: #721c24; background-color: #f8d7da; padding: 5px; border-radius:3px; margin-top:3px; max-height: 100px; overflow-y: auto; white-space: pre-wrap;}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <a href="{{ url_for('admin.index') }}">Dashboard</a>
+            <a href="{{ url_for('admin.manage_invites') }}">Invites</a>
+            <a href="{{ url_for('admin.manage_queue') }}">Queue</a>
+            <a href="{{ url_for('admin.settings') }}">Settings</a>
+            <a href="{{ url_for('admin.logout') }}">Logout</a>
+        </div>
+
+        <h1>Task Queue Management</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flash-messages">
+                {% for category, message in messages %}
+                    <li class="flash-{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        {% if tasks %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID (Short)</th>
+                        <th>Invite Code</th>
+                        <th>Status</th>
+                        <th>Type</th>
+                        <th>Priority</th>
+                        <th>Created At</th>
+                        <th>Details</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr>
+                        <td><span class="task-id-short">{{ task.task_id[:8] }}...</span></td>
+                        <td>{{ task.invite_code }}</td>
+                        <td><span class="status-{{ task.status | lower }}">{{ task.status | capitalize }}</span>
+                            {% if task.status == 'failed' and task.error_message %}
+                                <div class="error-message-display" title="{{ task.error_message }}">Hover to see error</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ task.task_type | capitalize if task.task_type else 'N/A' }}</td>
+                        <td>{{ task.priority }}</td>
+                        <td>{{ task.created_at.split('.')[0].replace('T', ' ') if task.created_at else 'N/A' }}</td>
+                        <td>
+                            <div class="path-details" title="Source: {{ task.source_path }}">Src: ...{{ task.source_path[-30:] if task.source_path else 'N/A' }}</div>
+                            <div class="path-details" title="Target: {{ task.target_path }}">Tgt: ...{{ task.target_path[-30:] if task.target_path else 'N/A' }}</div>
+                            {% if task.output_path %}
+                            <div class="path-details" title="Output: {{ task.output_path }}">Out: ...{{ task.output_path[-30:] }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="actions">
+                            <form method="POST" action="{{ url_for('admin.manage_queue') }}">
+                                <input type="hidden" name="task_id" value="{{ task.task_id }}">
+                                <input type="hidden" name="action" value="update_priority">
+                                <input type="number" name="priority" value="{{ task.priority }}" min="1" max="999">
+                                <button type="submit" class="btn-priority">Set Prio</button>
+                            </form>
+                            {% if task.status == 'failed' %}
+                            <form method="POST" action="{{ url_for('admin.manage_queue') }}">
+                                <input type="hidden" name="task_id" value="{{ task.task_id }}">
+                                <input type="hidden" name="action" value="retry_task">
+                                <button type="submit" class="btn-retry">Retry</button>
+                            </form>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('admin.manage_queue') }}" onsubmit="return confirm('Are you sure you want to delete task {{ task.task_id[:8] }}...? This will also attempt to delete associated files.');">
+                                <input type="hidden" name="task_id" value="{{ task.task_id }}">
+                                <input type="hidden" name="action" value="delete_task">
+                                <button type="submit" class="btn-delete">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="no-tasks">No tasks found in the queue.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

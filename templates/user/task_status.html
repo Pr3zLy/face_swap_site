@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Status - {{ task.task_id }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; color: #333; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .container { max-width: 800px; width:100%; margin: 20px auto; background-color: #fff; padding: 30px 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { color: #1d3557; text-align: center; margin-bottom: 20px; }
+
+        .task-info { margin-bottom: 25px; padding: 15px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 5px; }
+        .task-info p { margin: 8px 0; font-size: 0.95em; }
+        .task-info strong { color: #0056b3; }
+        .task-id { font-family: monospace; background-color: #e0e0e0; padding: 2px 5px; border-radius: 3px; }
+
+        .status-section { text-align: center; padding: 20px; border-radius: 5px; margin-bottom: 25px; }
+        .status-queued, .status-processing { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+        .status-completed { background-color: #d1e7dd; border: 1px solid #badbcc; color: #0f5132; }
+        .status-failed { background-color: #f8d7da; border: 1px solid #f5c2c7; color: #842029; }
+        .status-section h2 { margin-top: 0; margin-bottom: 10px; }
+
+        .loader { border: 8px solid #f3f3f3; border-radius: 50%; border-top: 8px solid #007bff; width: 50px; height: 50px; -webkit-animation: spin 1.5s linear infinite; animation: spin 1.5s linear infinite; margin: 20px auto; }
+        @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .output-media { margin-top: 20px; text-align: center; }
+        .output-media img, .output-media video { max-width: 100%; height: auto; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .output-media video { background-color: #000; } /* Background for video player controls */
+
+        .error-details { margin-top: 10px; font-family: monospace; white-space: pre-wrap; word-wrap: break-word; background-color: #ffebeb; padding: 10px; border-radius: 4px; border: 1px solid #ffc1c1; color: #c00; font-size: 0.85em; }
+
+        .action-links { text-align: center; margin-top: 30px; }
+        .action-links a { display: inline-block; margin: 0 10px; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; transition: background-color 0.2s; }
+        .action-links a:hover { background-color: #0056b3; }
+        .action-links a.secondary { background-color: #6c757d; }
+        .action-links a.secondary:hover { background-color: #545b62; }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Task Status</h1>
+
+        <div class="task-info">
+            <p><strong>Task ID:</strong> <span class="task-id">{{ task.task_id }}</span></p>
+            <p><strong>Invite Code:</strong> <span class="task-id">{{ task.invite_code }}</span></p>
+            <p><strong>Submitted At:</strong> {{ task.created_at.split('.')[0].replace('T', ' ') if task.created_at else 'N/A' }} UTC</p>
+            <p><strong>Task Type:</strong> {{ task.task_type | capitalize if task.task_type else 'N/A' }}</p>
+        </div>
+
+        <div id="status-display" class="status-section">
+            <!-- Content updated by JavaScript -->
+        </div>
+
+        <div id="output-display" class="output-media">
+            <!-- Output media (image/video) or error message updated by JavaScript -->
+        </div>
+
+        <div class="action-links">
+            <a href="{{ url_for('user.enter_invite_code') }}">Submit Another Task</a>
+        </div>
+
+    </div>
+
+    <script>
+        const taskId = "{{ task.task_id }}";
+        const initialStatus = "{{ task.status }}";
+        const initialOutputPath = "{{ task.display_output_path or '' }}";
+        const initialErrorMessage = "{{ task.error_message or '' }}";
+        const initialTaskType = "{{ task.task_type or 'image' }}"; // Default to image if not specified
+
+        const statusDisplay = document.getElementById('status-display');
+        const outputDisplay = document.getElementById('output-display');
+        let pollingInterval;
+
+        function updatePage(status, outputPath, errorMessage, taskType) {
+            statusDisplay.innerHTML = ''; // Clear previous status
+            outputDisplay.innerHTML = ''; // Clear previous output
+
+            statusDisplay.className = 'status-section'; // Reset class
+
+            let statusMessage = `<h2>Status: ${status.charAt(0).toUpperCase() + status.slice(1)}</h2>`;
+
+            if (status === 'queued' || status === 'processing') {
+                statusDisplay.classList.add(status === 'queued' ? 'status-queued' : 'status-processing');
+                statusMessage += `<p>Your task is currently ${status}. Please wait...</p><div class="loader"></div>`;
+                if (!pollingInterval) { // Start polling only if not already started
+                    pollingInterval = setInterval(pollStatus, 5000); // Poll every 5 seconds
+                }
+            } else if (status === 'completed') {
+                statusDisplay.classList.add('status-completed');
+                statusMessage += `<p>Your task has completed successfully!</p>`;
+                if (outputPath) {
+                    const outputUrl = `/outputs_serve/${outputPath}`;
+                    if (taskType === 'video') {
+                        outputDisplay.innerHTML = `<video controls autoplay loop muted><source src="${outputUrl}" type="video/mp4">Your browser does not support the video tag.</video>`;
+                    } else { // image
+                        outputDisplay.innerHTML = `<img src="${outputUrl}" alt="Processed Output">`;
+                    }
+                } else {
+                    outputDisplay.innerHTML = `<p>Output path is not available, but task is marked as completed.</p>`;
+                }
+                if (pollingInterval) clearInterval(pollingInterval);
+            } else if (status === 'failed') {
+                statusDisplay.classList.add('status-failed');
+                statusMessage += `<p>Unfortunately, your task has failed.</p>`;
+                if (errorMessage) {
+                    outputDisplay.innerHTML = `<h3>Error Details:</h3><div class="error-details">${escapeHtml(errorMessage)}</div>`;
+                } else {
+                    outputDisplay.innerHTML = `<p>No specific error message was provided.</p>`;
+                }
+                if (pollingInterval) clearInterval(pollingInterval);
+            } else { // Unknown status or 'not_found'
+                statusDisplay.classList.add('status-failed'); // Treat as an error
+                statusMessage = `<h2>Status: Unknown or Not Found</h2><p>Could not retrieve task status or task ID is invalid.</p>`;
+                if (pollingInterval) clearInterval(pollingInterval);
+            }
+            statusDisplay.innerHTML = statusMessage;
+        }
+
+        function pollStatus() {
+            fetch(`/api/task_status/${taskId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`API request failed with status ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    updatePage(data.status, data.display_output_path, data.error_message, data.task_type || initialTaskType);
+                })
+                .catch(error => {
+                    console.error('Error polling status:', error);
+                    statusDisplay.innerHTML = `<h2>Error</h2><p>Could not update task status: ${error.message}. Please refresh or try again later.</p>`;
+                    statusDisplay.className = 'status-section status-failed';
+                    if (pollingInterval) clearInterval(pollingInterval);
+                });
+        }
+
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return '';
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        // Initial page setup
+        document.addEventListener('DOMContentLoaded', () => {
+            updatePage(initialStatus, initialOutputPath, initialErrorMessage, initialTaskType);
+        });
+    </script>
+</body>
+</html>
