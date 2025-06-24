@@ -1,0 +1,5 @@
+{
+  "admin_password": "pbkdf2:sha256:600000$VfOpL0Xr1g5g0kZm$c71df531654deaba5036787b00e428f57066801c98f7782dd588d60d4089f17b",
+  "deep_live_cam_path": "C:\\ai\\fake_webcam\\Deep-Live-Cam-2.1",
+  "secret_key": "a_very_secret_key_that_should_be_changed"
+}

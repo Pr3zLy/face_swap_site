@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Invite Codes - Admin</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 900px; margin: 20px auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 15px rgba(0,0,0,0.1); }
+        h1, h2 { color: #0056b3; }
+        h1 { text-align: center; margin-bottom: 30px; }
+        h2 { margin-top: 30px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+        /* Flash Messages Styling (consistent with login) */
+        .flash-messages { list-style: none; padding: 0; margin-bottom: 20px; }
+        .flash-messages li { padding: 12px 15px; margin-bottom: 10px; border-radius: 5px; font-size: 0.95em; }
+        .flash-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .flash-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .flash-info { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+        .flash-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+
+        .form-section { margin-bottom: 30px; padding: 20px; background-color: #fdfdfd; border: 1px solid #eee; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; color: #555; }
+        select, input[type="text"] { width: calc(100% - 22px); padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button[type="submit"] { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        button[type="submit"]:hover { background-color: #0056b3; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
+        th { background-color: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        tr:hover { background-color: #e9e9e9; }
+        .status-used { color: #dc3545; font-weight: bold; }
+        .status-not-used { color: #28a745; font-weight: bold; }
+        .code { font-family: monospace; background-color: #e9ecef; padding: 3px 6px; border-radius: 3px; }
+
+        .no-invites { text-align: center; padding: 20px; color: #777; }
+        .nav-bar { margin-bottom: 20px; background-color: #333; padding: 10px; text-align: center; }
+        .nav-bar a { color: white; margin: 0 15px; text-decoration: none; font-size: 1.1em; }
+        .nav-bar a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <a href="{{ url_for('admin.index') }}">Dashboard</a>
+            <a href="{{ url_for('admin.manage_invites') }}">Invites</a>
+            <a href="{{ url_for('admin.manage_queue') }}">Queue</a>
+            <a href="{{ url_for('admin.settings') }}">Settings</a>
+            <a href="{{ url_for('admin.logout') }}">Logout</a>
+        </div>
+
+        <h1>Manage Invite Codes</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flash-messages">
+                {% for category, message in messages %}
+                    <li class="flash-{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <div class="form-section">
+            <h2>Generate New Invite Code</h2>
+            <form method="POST" action="{{ url_for('admin.manage_invites') }}">
+                <div class="form-group">
+                    <label for="invite_type">Invite Type:</label>
+                    <select id="invite_type" name="invite_type">
+                        <option value="image" selected>Image Only</option>
+                        <option value="video">Image & Video</option>
+                    </select>
+                </div>
+                <button type="submit">Generate Code</button>
+            </form>
+        </div>
+
+        <h2>Existing Invite Codes</h2>
+        {% if invites %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Created At (UTC)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invite in invites | sort(attribute='created_at', reverse=True) %}
+                    <tr>
+                        <td><span class="code">{{ invite.code }}</span></td>
+                        <td>{{ invite.type | capitalize }}</td>
+                        <td class="{{ 'status-used' if invite.used else 'status-not-used' }}">
+                            {{ 'Used' if invite.used else 'Not Used' }}
+                        </td>
+                        <td>{{ invite.created_at.split('.')[0].replace('T', ' ') if invite.created_at else 'N/A' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="no-invites">No invite codes found.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

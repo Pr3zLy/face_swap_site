@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Settings - Change Password</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f9f9f9; color: #333; }
+        .container { max-width: 700px; margin: 20px auto; background-color: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 15px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; margin-bottom: 30px; }
+        h2 { color: #0056b3; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; font-size: 1.4em; }
+
+        .flash-messages { list-style: none; padding: 0; margin-bottom: 20px; }
+        .flash-messages li { padding: 12px 15px; margin-bottom: 10px; border-radius: 5px; font-size: 0.95em; }
+        .flash-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .flash-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .flash-info { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+        .flash-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+
+        .form-section { margin-bottom: 30px; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; color: #555; }
+        input[type="password"] {
+            width: calc(100% - 24px);
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+        button[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.05em;
+            transition: background-color 0.2s ease-in-out;
+        }
+        button[type="submit"]:hover { background-color: #0056b3; }
+
+        .nav-bar { margin-bottom: 20px; background-color: #333; padding: 10px; text-align: center; }
+        .nav-bar a { color: white; margin: 0 15px; text-decoration: none; font-size: 1.1em; }
+        .nav-bar a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <a href="{{ url_for('admin.index') }}">Dashboard</a>
+            <a href="{{ url_for('admin.manage_invites') }}">Invites</a>
+            <a href="{{ url_for('admin.manage_queue') }}">Queue</a>
+            <a href="{{ url_for('admin.settings') }}">Settings</a>
+            <a href="{{ url_for('admin.logout') }}">Logout</a>
+        </div>
+
+        <h1>Admin Settings</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flash-messages">
+                {% for category, message in messages %}
+                    <li class="flash-{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <div class="form-section">
+            <h2>Change Admin Password</h2>
+            <form method="POST" action="{{ url_for('admin.settings') }}">
+                <div class="form-group">
+                    <label for="old_password">Old Password:</label>
+                    <input type="password" id="old_password" name="old_password" required>
+                </div>
+                <div class="form-group">
+                    <label for="new_password">New Password:</label>
+                    <input type="password" id="new_password" name="new_password" minlength="8" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_new_password">Confirm New Password:</label>
+                    <input type="password" id="confirm_new_password" name="confirm_new_password" minlength="8" required>
+                </div>
+                <button type="submit">Change Password</button>
+            </form>
+        </div>
+
+        <!-- Other settings can be added here in the future -->
+
+    </div>
+</body>
+</html>

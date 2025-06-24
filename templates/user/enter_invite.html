@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enter Invite Code</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; color: #333; }
+        .container { background-color: #fff; padding: 30px 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
+        h1 { color: #1d3557; margin-bottom: 25px; font-size: 1.8em; }
+
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #495057; font-size: 0.95em; }
+        input[type="text"] {
+            width: calc(100% - 24px);
+            padding: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1em;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        input[type="text"]:focus {
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+
+        button[type="submit"] {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: background-color 0.2s ease-in-out;
+        }
+        button[type="submit"]:hover { background-color: #0056b3; }
+
+        /* Flash Messages Styling (consistent with admin) */
+        .flash-messages { list-style: none; padding: 0; margin-top: 20px; text-align: left; }
+        .flash-messages li { padding: 12px 15px; margin-bottom: 12px; border-radius: 5px; font-size: 0.9em; }
+        .flash-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .flash-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .flash-info { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+        .flash-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome!</h1>
+        <p style="margin-bottom: 25px; color: #6c757d;">Please enter your invite code to proceed.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flash-messages">
+                {% for category, message in messages %}
+                    <li class="flash-{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('user.enter_invite_code') }}">
+            <div class="form-group">
+                <label for="invite_code">Invite Code:</label>
+                <input type="text" id="invite_code" name="invite_code" required autofocus>
+            </div>
+            <button type="submit">Submit Code</button>
+        </form>
+    </div>
+</body>
+</html>

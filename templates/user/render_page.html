@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Media</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 700px; margin: 20px auto; background-color: #fff; padding: 30px 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { color: #1d3557; text-align: center; margin-bottom: 15px; }
+        .invite-info { text-align: center; margin-bottom: 25px; color: #495057; }
+        .invite-info .code { font-family: monospace; background-color: #e9ecef; padding: 3px 6px; border-radius: 3px; font-weight: bold; }
+        .invite-info .type { font-style: italic; }
+
+        .form-section { margin-bottom: 25px; }
+        .form-section h2 { font-size: 1.3em; color: #0056b3; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 15px; }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #495057; font-size: 0.95em; }
+        input[type="file"] { display: block; margin-top: 5px; font-size: 0.9em; }
+
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 10px; }
+        .checkbox-group { display: flex; align-items: center; background-color: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #e9ecef; }
+        .checkbox-group input[type="checkbox"] { margin-right: 10px; width: 18px; height: 18px; }
+        .checkbox-group label { margin-bottom: 0; font-weight: normal; font-size: 0.9em; }
+
+        button[type="submit"] {
+            background-color: #28a745; /* Green */
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1.2em;
+            font-weight: bold;
+            transition: background-color 0.2s ease-in-out;
+            margin-top: 20px;
+        }
+        button[type="submit"]:hover { background-color: #1e7e34; }
+
+        /* Flash Messages Styling */
+        .flash-messages { list-style: none; padding: 0; margin-bottom: 20px; text-align: left; }
+        .flash-messages li { padding: 12px 15px; margin-bottom: 12px; border-radius: 5px; font-size: 0.9em; }
+        .flash-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .flash-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .flash-info { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+        .flash-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Process Your Media</h1>
+        <div class="invite-info">
+            Using Invite Code: <span class="code">{{ invite_code }}</span>
+            (<span class="type">Type: {{ invite_type | capitalize }}</span>)
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flash-messages">
+                {% for category, message in messages %}
+                    <li class="flash-{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('user.render_page', invite_code=invite_code) }}" enctype="multipart/form-data">
+
+            <div class="form-section">
+                <h2>Upload Files</h2>
+                <div class="form-group">
+                    <label for="source_image">Source Image:</label>
+                    <input type="file" id="source_image" name="source_image" accept="image/jpeg, image/png, image/webp" required>
+                </div>
+                <div class="form-group">
+                    <label for="target_media">Target Media:</label>
+                    {% if invite_type == 'video' %}
+                        <input type="file" id="target_media" name="target_media" accept="image/jpeg, image/png, image/webp, video/mp4, video/webm, video/quicktime" required>
+                        <small>Accepted: Images (jpg, png, webp) or Videos (mp4, webm, mov)</small>
+                    {% else %}
+                        <input type="file" id="target_media" name="target_media" accept="image/jpeg, image/png, image/webp" required>
+                        <small>Accepted: Images (jpg, png, webp)</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Processing Options</h2>
+                <p><small>Select the options for the faceswap process. All options are disabled by default.</small></p>
+                <div class="options-grid">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="fp_face_swapper" name="fp_face_swapper" value="on">
+                        <label for="fp_face_swapper">Face Swapper (Frame Processor)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="fp_face_enhancer" name="fp_face_enhancer" value="on">
+                        <label for="fp_face_enhancer">Face Enhancer (Frame Processor)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="keep_fps" name="keep_fps" value="on">
+                        <label for="keep_fps">Keep Original FPS (Video)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="keep_audio" name="keep_audio" value="on">
+                        <label for="keep_audio">Keep Original Audio (Video)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="keep_frames" name="keep_frames" value="on">
+                        <label for="keep_frames">Keep Temporary Frames</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="many_faces" name="many_faces" value="on">
+                        <label for="many_faces">Process Every Face</label>
+                    </div>
+                     <div class="checkbox-group">
+                        <input type="checkbox" id="map_faces" name="map_faces" value="on">
+                        <label for="map_faces">Map Source/Target Faces</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="mouth_mask" name="mouth_mask" value="on">
+                        <label for="mouth_mask">Enable Mouth Mask</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="ep_cuda" name="ep_cuda" value="on">
+                        <label for="ep_cuda">Use CUDA (GPU Execution)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="ep_cpu" name="ep_cpu" value="on">
+                        <label for="ep_cpu">Use CPU (Execution Provider)</label>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit">Start Process</button>
+        </form>
+    </div>
+</body>
+</html>
